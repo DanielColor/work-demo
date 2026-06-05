@@ -1,0 +1,12 @@
+---
+ssh_config_output: "~/.ssh/config.d/ansible-lab"
+ssh_config_default_identity: "~/.ssh/ansible_deploy"
+ssh_config_strict_host_checking: false
+
+ssh_config_global:
+  AddKeysToAgent: "yes"
+  ServerAliveInterval: 60
+  ServerAliveCountMax: 3
+  ControlMaster: auto
+  ControlPath: "~/.ssh/sockets/%r@%h:%p"
+  ControlPersist: 10m

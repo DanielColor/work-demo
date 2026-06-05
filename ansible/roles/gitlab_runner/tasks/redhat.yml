@@ -1,0 +1,18 @@
+---
+- name: Add GitLab Runner repository
+  yum_repository:
+    name: gitlab_runner
+    description: GitLab Runner
+    baseurl: https://packages.gitlab.com/runner/gitlab-runner/el/{{ ansible_distribution_major_version }}/$basearch
+    gpgkey:
+      - https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+      - https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80CF6D362C45C7.pub.gpg
+    gpgcheck: true
+    repo_gpgcheck: true
+    state: present
+
+- name: Install gitlab-runner
+  dnf:
+    name: gitlab-runner
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"

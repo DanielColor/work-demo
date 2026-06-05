@@ -1,0 +1,6 @@
+---
+- name: reload prometheus
+  uri:
+    url: "{{ prometheus_reload_url }}"
+    method: POST
+  failed_when: false

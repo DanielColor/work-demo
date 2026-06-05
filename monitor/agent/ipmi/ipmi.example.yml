@@ -1,0 +1,11 @@
+modules:
+  default:
+    user: "CHANGE_ME"
+    pass: "CHANGE_ME"
+    driver: "LAN_2_0"
+    privilege: "user"
+    collectors:
+      - bmc
+      - ipmi
+      - chassis
+      - sel

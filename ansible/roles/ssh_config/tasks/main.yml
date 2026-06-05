@@ -1,0 +1,32 @@
+---
+- name: Ensure SSH config.d directory exists
+  ansible.builtin.file:
+    path: "{{ ssh_config_output | dirname }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate SSH config from inventory
+  ansible.builtin.template:
+    src: ssh_config.j2
+    dest: "{{ ssh_config_output }}"
+    mode: "0600"
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure Include directive exists in ~/.ssh/config
+  ansible.builtin.lineinfile:
+    path: "~/.ssh/config"
+    line: "Include {{ ssh_config_output }}"
+    create: true
+    mode: "0600"
+    insertbefore: BOF
+  delegate_to: localhost
+  run_once: true
+
+- name: Show result
+  ansible.builtin.debug:
+    msg: "SSH config written to {{ ssh_config_output }}"
+  delegate_to: localhost
+  run_once: true

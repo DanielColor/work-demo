@@ -1,0 +1,3 @@
+---
+gitlab_runner_concurrent: 4
+gitlab_runner_docker_prune_disk_threshold: 80

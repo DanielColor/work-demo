@@ -1,0 +1,7 @@
+---
+harbor_registry_host: "192.168.1.x"
+harbor_registry_project: "lab"
+harbor_deployer_user: "robot$lab+dev"
+harbor_deployer_token: "{{ vault_harbor_deployer_token }}"
+harbor_ci_user: "robot$lab+ci"
+harbor_ci_token: "{{ vault_harbor_ci_token }}"

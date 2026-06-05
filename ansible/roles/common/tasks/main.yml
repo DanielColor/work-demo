@@ -1,0 +1,23 @@
+---
+- name: Include OS-specific tasks
+  include_tasks: "{{ ansible_os_family | lower }}.yml"
+
+- name: Enable bash-completion system-wide
+  blockinfile:
+    path: "{{ _bashrc_path }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK bash-completion"
+    block: |
+      if ! shopt -oq posix; then
+        if [ -f /usr/share/bash-completion/bash_completion ]; then
+          . /usr/share/bash-completion/bash_completion
+        fi
+      fi
+  when: _bashrc_path is defined
+
+- name: Deploy vim config
+  template:
+    src: vimrc.local.j2
+    dest: "{{ _vimrc_path }}"
+    owner: root
+    group: root
+    mode: "0644"

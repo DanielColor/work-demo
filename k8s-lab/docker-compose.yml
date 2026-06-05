@@ -1,0 +1,57 @@
+services:
+  master:
+    image: ubuntu:22.04
+    container_name: k8s-master
+    hostname: k8s-master
+    privileged: true
+    tty: true
+    stdin_open: true
+    networks:
+      k8s-network:
+        ipv4_address: 10.10.0.x
+    volumes:
+      - /lib/modules:/lib/modules:ro
+      - master-data:/var/lib/kubelet
+    command: /bin/bash -c "apt-get update -qq && apt-get install -y -qq systemd systemd-sysv 2>/dev/null; exec /sbin/init"
+
+  worker1:
+    image: ubuntu:22.04
+    container_name: k8s-worker1
+    hostname: k8s-worker1
+    privileged: true
+    tty: true
+    stdin_open: true
+    networks:
+      k8s-network:
+        ipv4_address: 10.10.0.x
+    volumes:
+      - /lib/modules:/lib/modules:ro
+      - worker1-data:/var/lib/kubelet
+    command: /bin/bash -c "apt-get update -qq && apt-get install -y -qq systemd systemd-sysv 2>/dev/null; exec /sbin/init"
+
+  worker2:
+    image: ubuntu:22.04
+    container_name: k8s-worker2
+    hostname: k8s-worker2
+    privileged: true
+    tty: true
+    stdin_open: true
+    networks:
+      k8s-network:
+        ipv4_address: 10.10.0.x
+    volumes:
+      - /lib/modules:/lib/modules:ro
+      - worker2-data:/var/lib/kubelet
+    command: /bin/bash -c "apt-get update -qq && apt-get install -y -qq systemd systemd-sysv 2>/dev/null; exec /sbin/init"
+
+networks:
+  k8s-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+
+volumes:
+  master-data:
+  worker1-data:
+  worker2-data:

@@ -1,0 +1,4 @@
+---
+node_exporter_port: 9100
+monitoring_src_path: /opt/monitor
+prom_env: internal

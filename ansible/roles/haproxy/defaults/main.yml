@@ -1,0 +1,6 @@
+---
+haproxy_domain: example.com
+haproxy_cert_path: "/etc/haproxy/certs/{{ haproxy_domain }}.pem"
+haproxy_config_path: /etc/haproxy/haproxy.cfg
+
+services: []

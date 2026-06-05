@@ -1,0 +1,36 @@
+---
+- name: Ensure targets directory exists
+  file:
+    path: "{{ prometheus_file_sd_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Build list of monitored hosts
+  set_fact:
+    _monitored_hosts: >-
+      {{ prometheus_file_sd_exporter_groups
+         | map('extract', groups, [])
+         | flatten | unique
+         | intersect(groups['lab']) }}
+
+- name: Generate per-host target files
+  template:
+    src: host_targets.yml.j2
+    dest: "{{ prometheus_file_sd_dir }}/{{ item }}.yml"
+    mode: "0644"
+  loop: "{{ _monitored_hosts }}"
+  notify: reload prometheus
+
+- name: Find existing target files
+  find:
+    paths: "{{ prometheus_file_sd_dir }}"
+    patterns: "*.yml"
+  register: _existing_files
+
+- name: Remove stale target files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _existing_files.files }}"
+  when: item.path | basename | regex_replace('\.yml$', '') not in _monitored_hosts
+  notify: reload prometheus

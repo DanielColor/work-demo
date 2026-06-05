@@ -1,0 +1,8 @@
+---
+- name: Sync Cloudflare DNS records
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  roles:
+    - role: cloudflare_dns

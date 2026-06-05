@@ -1,0 +1,16 @@
+---
+common_packages_debian:
+  - vim
+  - net-tools
+  - sudo
+  - bash-completion
+
+common_packages_redhat:
+  - vim
+  - net-tools
+  - sudo
+
+common_packages_alpine:
+  - vim
+  - net-tools
+  - sudo

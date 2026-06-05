@@ -1,0 +1,82 @@
+services:
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    command:
+      - --path.rootfs=/host
+
+  dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:latest
+    container_name: dcgm-exporter
+    restart: unless-stopped
+    networks:
+      monitoring:
+        ipv4_address: 172.30.0.2
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "9400:9400"
+    volumes:
+      - ./dcgm/counters.csv:/etc/dcgm-exporter/default-counters.csv
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - LOKI_HOST=${LOKI_HOST}
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail.yml -config.expand-env=true
+
+  ipmi-exporter:
+    image: prometheuscommunity/ipmi-exporter
+    container_name: ipmi-exporter
+    restart: unless-stopped
+    networks:
+      monitoring:
+        ipv4_address: 172.30.0.15
+    volumes:
+      - ./ipmi/ipmi.yml:/config.yml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter
+    container_name: pve-exporter
+    restart: unless-stopped
+    networks:
+      monitoring:
+        ipv4_address: 172.30.0.14
+    command:
+      - --config.file=/etc/pve/pve.yml
+    volumes:
+      - ./pve/pve.yml:/etc/pve/pve.yml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+
+networks:
+  monitoring:
+    name: monitoring
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

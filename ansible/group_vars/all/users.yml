@@ -1,0 +1,10 @@
+---
+docker_users: []
+# docker_users:
+#   - ubuntu
+
+ssh_keys:
+  - user: demo
+    key: "ssh-ed25519 <YOUR_PUBLIC_KEY> demo@example.com"
+    create_user: true
+    sudo: true

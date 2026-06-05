@@ -1,0 +1,13 @@
+---
+- name: Create DNS A records for services
+  community.general.cloudflare_dns:
+    zone: "{{ cloudflare_zone }}"
+    record: "{{ item.name }}"
+    type: A
+    value: "{{ haproxy_ip }}"
+    ttl: "{{ cloudflare_record_ttl }}"
+    proxied: "{{ cloudflare_record_proxied }}"
+    api_token: "{{ cloudflare_api_token }}"
+    state: present
+  loop: "{{ services }}"
+  when: item.dns | default(true)

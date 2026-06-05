@@ -1,0 +1,7 @@
+---
+- name: Install tzdata and chrony
+  package:
+    name:
+      - tzdata
+      - chrony
+    state: present

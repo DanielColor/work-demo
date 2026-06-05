@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 5m
+  evaluation_interval: 5m
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["172.30.0.12:9093"]
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          app: "prometheus"
+
+  - job_name: "all"
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/*.yml
+    relabel_configs:
+      - source_labels: [job]
+        target_label: job
+      - source_labels: [__address__]
+        regex: "([^:]+):[0-9]+"
+        replacement: "${1}"
+        target_label: instance

@@ -1,0 +1,5 @@
+---
+prometheus_file_sd_dir: "{{ monitoring_src_path }}/prometheus/targets"
+prometheus_reload_url: http://localhost:9090/-/reload
+prometheus_file_sd_exporter_groups:
+  - node_exporter

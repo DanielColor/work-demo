@@ -1,0 +1,8 @@
+---
+- name: Install node_exporter (binary)
+  include_tasks: binary.yml
+  when: node_exporter_install_method == 'binary'
+
+- name: Install node_exporter (docker)
+  include_tasks: docker.yml
+  when: node_exporter_install_method == 'docker'

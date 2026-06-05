@@ -1,0 +1,9 @@
+---
+- name: Set paths
+  set_fact:
+    _vimrc_path: /etc/vim/vimrc.local
+
+- name: Install common packages
+  package:
+    name: "{{ common_packages_alpine }}"
+    state: present

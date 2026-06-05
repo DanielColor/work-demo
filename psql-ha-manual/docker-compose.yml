@@ -1,0 +1,77 @@
+name: psql-ha-manual
+
+networks:
+  pg-ha:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+
+services:
+  node1:
+    build: ./node
+    container_name: node1
+    hostname: node1
+    networks:
+      pg-ha:
+        ipv4_address: 172.21.0.11
+    ports:
+      - "15432:5432"   # postgres
+      - "18008:8008"   # patroni REST API
+      - "12379:2379"   # etcd client
+      - "12380:2380"   # etcd peer
+    volumes:
+      - node1-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  node2:
+    build: ./node
+    container_name: node2
+    hostname: node2
+    networks:
+      pg-ha:
+        ipv4_address: 172.21.0.12
+    ports:
+      - "25432:5432"
+      - "28008:8008"
+      - "22379:2379"
+      - "22380:2380"
+    volumes:
+      - node2-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  node3:
+    build: ./node
+    container_name: node3
+    hostname: node3
+    networks:
+      pg-ha:
+        ipv4_address: 172.21.0.13
+    ports:
+      - "35432:5432"
+      - "38008:8008"
+      - "32379:2379"
+      - "32380:2380"
+    volumes:
+      - node3-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  haproxy:
+    image: haproxy:2.9
+    container_name: haproxy
+    hostname: haproxy
+    networks:
+      pg-ha:
+        ipv4_address: 172.21.0.20
+    ports:
+      - "55432:5432"   # primary (read-write)
+      - "55433:5433"   # replicas (read-only)
+      - "7000:7000"   # stats UI
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    restart: unless-stopped

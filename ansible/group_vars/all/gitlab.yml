@@ -1,0 +1,38 @@
+---
+gitlab_api_url: http://192.168.1.x:6060
+gitlab_group: your-group
+
+gitlab_group_variables:
+  - name: TELEGRAM_BOT_TOKEN
+    value: "{{ vault_telegram_bot_token }}"
+    hidden: true
+    protected: true
+  - name: TELEGRAM_CHAT_ID
+    value: "{{ vault_telegram_chat_id }}"
+    hidden: true
+    protected: true
+  - name: SSH_DEPLOY_KEY
+    value: "{{ vault_ssh_deploy_key }}"
+    masked: false
+    protected: false
+    variable_type: file
+  - name: HARBOR_CI_TOKEN
+    value: "{{ vault_harbor_ci_token }}"
+    hidden: true
+    protected: false
+  - name: HARBOR_CI_USER
+    value: "robot$lab+ci"
+    hidden: false
+    protected: false
+
+gitlab_project_variables:
+  - project: your-group/monitor
+    variables:
+      - name: GRAFANA_ADMIN_PASSWORD
+        value: "{{ vault_grafana_admin_password }}"
+        hidden: true
+        protected: false
+      - name: LDAP_BIND_PASSWORD
+        value: "{{ vault_ldap_bind_password }}"
+        hidden: true
+        protected: false

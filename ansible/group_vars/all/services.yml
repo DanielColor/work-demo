@@ -1,0 +1,42 @@
+---
+haproxy_domain: example.com
+haproxy_ip: 192.168.1.x
+
+services:
+  - name: pvemgt
+    ip: 192.168.1.x
+    port: 8006
+    ssl: true
+    healthcheck: "GET /"
+    healthcheck_status: 200
+
+  - name: pvebmc
+    ip: 192.168.1.x
+    port: 443
+    ssl: true
+
+  - name: fw01
+    ip: 192.168.1.x
+    port: 443
+    ssl: true
+
+  - name: influxdb
+    ip: 192.168.1.x
+    port: 8086
+
+  - name: gitlab
+    ip: 192.168.1.x
+    port: 6060
+
+  - name: iportal
+    ip: 192.168.1.x
+    port: 80
+
+  - name: assetmgt
+    ip: 192.168.1.x
+    port: 8843
+    ssl: true
+
+  - name: drid
+    ip: x.x.x.x
+    port: 8888

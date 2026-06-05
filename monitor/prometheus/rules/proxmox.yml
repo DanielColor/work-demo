@@ -1,0 +1,47 @@
+groups:
+  - name: proxmox
+    rules:
+      - alert: ProxmoxDown
+        expr: up{job="proxmox"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox exporter 離線"
+          description: "無法連線至 pve-exporter"
+
+      - alert: ProxmoxApiDown
+        expr: pve_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox API 無回應"
+          description: "{{ $labels.instance }} Proxmox API 無法連線"
+
+      - alert: ProxmoxCpuHigh
+        expr: pve_node_cpu_usage_ratio * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox CPU 使用率過高"
+          description: "{{ $labels.instance }} CPU 使用率 {{ printf \"%.1f\" $value }}%"
+
+      - alert: ProxmoxMemoryHigh
+        expr: pve_node_memory_usage_bytes / pve_node_memory_size_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox 記憶體不足"
+          description: "{{ $labels.instance }} 記憶體使用率 {{ printf \"%.1f\" $value }}%"
+
+      - alert: ProxmoxStorageHigh
+        expr: pve_disk_usage_bytes / pve_disk_size_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox 儲存空間不足"
+          description: "{{ $labels.instance }} {{ $labels.id }} 使用率 {{ printf \"%.1f\" $value }}%"

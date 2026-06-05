@@ -1,0 +1,62 @@
+groups:
+  - name: node
+    rules:
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "主機離線"
+          description: "主機無法連線"
+          dashboard_uid: "rYdddlPWk"
+
+      - alert: NodeCpuHigh
+        expr: avg by(instance, role, env) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU 使用率過高"
+          description: "CPU 使用率 {{ printf \"%.1f\" $value }}%"
+          dashboard_uid: "rYdddlPWk"
+
+      - alert: NodeMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "記憶體不足"
+          description: "可用記憶體剩餘 {{ printf \"%.1f\" $value }}%"
+          dashboard_uid: "rYdddlPWk"
+
+      - alert: NodeDiskLow
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁碟空間不足"
+          description: "{{ $labels.mountpoint }} 剩餘 {{ printf \"%.1f\" $value }}%"
+          dashboard_uid: "rYdddlPWk"
+
+      - alert: NodeDiskCritical
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes * 100 < 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "磁碟空間嚴重不足"
+          description: "{{ $labels.mountpoint }} 剩餘 {{ printf \"%.1f\" $value }}%，請立即處理"
+          dashboard_uid: "rYdddlPWk"
+
+      - alert: DockerVolumeLow
+        expr: node_filesystem_avail_bytes{mountpoint="/var/lib/docker"} / node_filesystem_size_bytes * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Docker volume 空間不足"
+          description: "Docker 資料目錄剩餘 {{ printf \"%.1f\" $value }}%"
+          dashboard_uid: "rYdddlPWk"

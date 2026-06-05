@@ -1,0 +1,14 @@
+---
+harbor_version: "2.11.1"
+harbor_install_dir: /opt/harbor
+harbor_data_dir: /data/harbor
+harbor_hostname: "{{ hostvars['harbor'].ansible_host }}"
+harbor_admin_password: ""
+harbor_db_password: ""
+
+harbor_ldap_url: "ldap://192.168.1.x"
+harbor_ldap_base_dn: "ou=Users,dc=example,dc=local"
+harbor_ldap_uid: "uid"
+harbor_ldap_bind_dn: "cn=admin,dc=example,dc=local"
+harbor_ldap_bind_password: ""
+harbor_ldap_scope: 2

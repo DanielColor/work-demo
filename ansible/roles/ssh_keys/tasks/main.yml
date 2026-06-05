@@ -1,0 +1,80 @@
+---
+- name: Set sudo group by OS
+  set_fact:
+    _sudo_group: "{{ 'wheel' if ansible_os_family == 'RedHat' else 'sudo' }}"
+
+- name: Create users
+  user:
+    name: "{{ item.user }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    create_home: true
+    state: "{{ item.state | default('present') }}"
+    password: "*"
+  loop: "{{ ssh_keys }}"
+  when: item.create_user | default(false)
+
+- name: Add users to sudo group
+  user:
+    name: "{{ item.user }}"
+    groups: "{{ _sudo_group }}"
+    append: true
+  loop: "{{ ssh_keys }}"
+  when: item.sudo | default(false)
+
+- name: Ensure sudoers.d directory exists
+  file:
+    path: /etc/sudoers.d
+    state: directory
+    mode: "0750"
+  when: ssh_keys | selectattr('sudo', 'defined') | selectattr('sudo') | list | length > 0
+
+- name: Configure passwordless sudo
+  copy:
+    content: "{{ item.user }} ALL=(ALL) NOPASSWD:ALL\n"
+    dest: "/etc/sudoers.d/{{ item.user }}"
+    mode: "0440"
+    validate: "visudo -cf %s"
+  loop: "{{ ssh_keys }}"
+  when: item.sudo | default(false)
+
+- name: Manage SSH authorized keys
+  authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ item.key }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ssh_keys }}"
+
+- name: Verify new accounts have authorized_keys before cleanup
+  stat:
+    path: "/home/{{ item.user }}/.ssh/authorized_keys"
+  register: _key_check
+  loop: "{{ ssh_keys }}"
+  when:
+    - ssh_cleanup_default_users | length > 0
+    - item.create_user | default(false)
+  tags: [cleanup_default_keys, never]
+
+- name: Fail if any new account is missing authorized_keys
+  fail:
+    msg: "{{ item.item.user }} 的 authorized_keys 不存在，請確認帳號設定正確再清除預設帳號"
+  loop: "{{ _key_check.results }}"
+  when:
+    - ssh_cleanup_default_users | length > 0
+    - item.skipped is not defined
+    - not item.stat.exists
+  tags: [cleanup_default_keys, never]
+
+- name: Check default account home directory exists
+  stat:
+    path: "/home/{{ item }}/.ssh/authorized_keys"
+  register: _default_key_check
+  loop: "{{ ssh_cleanup_default_users }}"
+  tags: [cleanup_default_keys, never]
+
+- name: Remove default account authorized_keys
+  file:
+    path: "/home/{{ item.item }}/.ssh/authorized_keys"
+    state: absent
+  loop: "{{ _default_key_check.results }}"
+  when: item.stat.exists
+  tags: [cleanup_default_keys, never]

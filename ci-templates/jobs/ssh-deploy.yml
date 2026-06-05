@@ -1,0 +1,33 @@
+# SSH Deploy Setup
+#
+# 使用方式：
+#
+#   include:
+#     - project: 'your-group/ci-template'
+#       file: '/jobs/ssh-deploy.yml'
+#
+#   deploy:
+#     extends: .ssh-deploy-setup
+#     variables:
+#       DEPLOY_HOST: "192.168.1.x"   # 目標機器 IP
+#     tags:
+#       - docker
+#     script:
+#       - ssh CI_Deploy@$DEPLOY_HOST "cd /opt/myapp && docker compose pull && docker compose up -d"
+#     rules:
+#       - if: $CI_COMMIT_BRANCH == "main"
+#
+# 前置條件：
+#   - Group variable SSH_DEPLOY_KEY 需設定（File 類型，CI_Deploy 私鑰，）
+#   - 目標機器需有 CI_Deploy 帳號（Ansible init.yml 會建立）
+
+---
+.ssh-deploy-setup:
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - chmod 400 ${SSH_DEPLOY_KEY}
+    - eval $(ssh-agent -s)
+    - ssh-add ${SSH_DEPLOY_KEY}
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts

@@ -1,0 +1,83 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+MASTER_IP   = "10.10.0.10"
+WORKER_IPS  = { "k8s-worker1" => "10.10.0.11", "k8s-worker2" => "10.10.0.12" }
+RANCHER_IP  = "10.10.0.20"
+
+# 192.168.56.x — VirtualBox host-only，Windows 可直接連線
+MASTER_HOST_IP  = "192.168.56.50"
+WORKER_HOST_IPS = { "k8s-worker1" => "192.168.56.51", "k8s-worker2" => "192.168.56.52" }
+RANCHER_HOST_IP = "192.168.56.60"
+
+BOX           = "ubuntu/jammy64"
+MASTER_CPUS   = 2
+MASTER_MEMORY = 4096
+WORKER_CPUS   = 2
+WORKER_MEMORY = 2048
+
+MY_PUBKEY     = "ssh-ed25519 <YOUR_PUBLIC_KEY> user@example.com"
+DEPLOY_PUBKEY = "ssh-ed25519 <DEPLOY_PUBLIC_KEY> deploy@example.com"
+
+INJECT_KEYS = <<~SHELL
+  mkdir -p /home/vagrant/.ssh
+  chmod 700 /home/vagrant/.ssh
+  echo "#{MY_PUBKEY}"     >> /home/vagrant/.ssh/authorized_keys
+  echo "#{DEPLOY_PUBKEY}" >> /home/vagrant/.ssh/authorized_keys
+  chmod 600 /home/vagrant/.ssh/authorized_keys
+  chown -R vagrant:vagrant /home/vagrant/.ssh
+SHELL
+
+Vagrant.configure("2") do |config|
+  config.vm.box = BOX
+  config.vm.boot_timeout = 600
+  config.ssh.insert_key = false   # 不使用 Vagrant 預設的 insecure key
+
+  # ── Master ──────────────────────────────────────────────────────────────────
+  config.vm.define "k8s-master", primary: true do |m|
+    m.vm.hostname = "k8s-master"
+    m.vm.network "private_network", ip: MASTER_IP
+    m.vm.network "private_network", ip: MASTER_HOST_IP
+
+    m.vm.provider "virtualbox" do |vb|
+      vb.name   = "k8s-master"
+      vb.cpus   = MASTER_CPUS
+      vb.memory = MASTER_MEMORY
+      vb.customize ["storagectl", :id, "--name", "SCSI", "--hostiocache", "on"]
+    end
+
+    m.vm.provision "shell", inline: INJECT_KEYS
+  end
+
+  # ── Rancher ─────────────────────────────────────────────────────────────────
+  config.vm.define "rancher" do |r|
+    r.vm.hostname = "rancher"
+    r.vm.network "private_network", ip: RANCHER_IP
+    r.vm.network "private_network", ip: RANCHER_HOST_IP
+
+    r.vm.provider "virtualbox" do |vb|
+      vb.name   = "rancher"
+      vb.cpus   = 4
+      vb.memory = 8192
+    end
+
+    r.vm.provision "shell", inline: INJECT_KEYS
+  end
+
+  # ── Workers ─────────────────────────────────────────────────────────────────
+  WORKER_IPS.each do |name, ip|
+    config.vm.define name do |w|
+      w.vm.hostname = name
+      w.vm.network "private_network", ip: ip
+      w.vm.network "private_network", ip: WORKER_HOST_IPS[name]
+
+      w.vm.provider "virtualbox" do |vb|
+        vb.name   = name
+        vb.cpus   = WORKER_CPUS
+        vb.memory = WORKER_MEMORY
+      end
+
+      w.vm.provision "shell", inline: INJECT_KEYS
+    end
+  end
+end

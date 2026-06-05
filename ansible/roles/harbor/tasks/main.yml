@@ -1,0 +1,59 @@
+---
+- name: Install prerequisites
+  package:
+    name:
+      - curl
+      - tar
+    state: present
+
+- name: Create harbor install directory
+  file:
+    path: "{{ harbor_install_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create harbor data directory
+  file:
+    path: "{{ harbor_data_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Check if harbor is already installed
+  stat:
+    path: "{{ harbor_install_dir }}/harbor.yml"
+  register: harbor_installed
+
+- name: Download harbor installer
+  get_url:
+    url: "https://github.com/goharbor/harbor/releases/download/v{{ harbor_version }}/harbor-online-installer-v{{ harbor_version }}.tgz"
+    dest: "/tmp/harbor-v{{ harbor_version }}.tgz"
+    mode: "0644"
+  when: not harbor_installed.stat.exists
+
+- name: Extract harbor installer
+  unarchive:
+    src: "/tmp/harbor-v{{ harbor_version }}.tgz"
+    dest: "/tmp"
+    remote_src: true
+  when: not harbor_installed.stat.exists
+
+- name: Copy harbor files to install directory
+  copy:
+    src: "/tmp/harbor/"
+    dest: "{{ harbor_install_dir }}/"
+    remote_src: true
+  when: not harbor_installed.stat.exists
+
+- name: Deploy harbor.yml
+  template:
+    src: harbor.yml.j2
+    dest: "{{ harbor_install_dir }}/harbor.yml"
+    mode: "0600"
+  notify: Restart harbor
+
+- name: Run harbor installer
+  command: ./install.sh
+  args:
+    chdir: "{{ harbor_install_dir }}"
+    creates: "{{ harbor_install_dir }}/docker-compose.yml"
+  ignore_errors: "{{ ansible_check_mode }}"

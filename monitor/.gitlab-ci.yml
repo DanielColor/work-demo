@@ -1,0 +1,52 @@
+include:
+  - project: 'your-group/ci-template'
+    file: '/jobs/ssh-deploy.yml'
+  - project: 'your-group/ci-template'
+    file: '/jobs/secret-detection.yml'
+  - project: 'your-group/ci-template'
+    file: '/jobs/notify-telegram.yml'
+
+stages:
+  - notify_start
+  - test
+  - deploy
+  - notify_end
+
+
+notify-start:
+  extends: .notify-telegram-start
+  stage: notify_start
+  tags:
+    - docker
+
+secret-detection:
+  extends: .secret-detection
+
+deploy:
+  stage: deploy
+  extends: .ssh-deploy-setup
+  variables:
+    DEPLOY_HOST: "192.168.1.x"
+  tags:
+    - docker
+  script:
+    - apk add --no-cache rsync gettext
+    - echo "GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}" > $CI_PROJECT_DIR/.env
+    - envsubst '${TELEGRAM_BOT_TOKEN},${TELEGRAM_CHAT_ID}' < $CI_PROJECT_DIR/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && mv /tmp/alertmanager.yml $CI_PROJECT_DIR/alertmanager/alertmanager.yml
+    - envsubst '${LDAP_BIND_PASSWORD}' < $CI_PROJECT_DIR/grafana/ldap.toml > /tmp/ldap.toml && mv /tmp/ldap.toml $CI_PROJECT_DIR/grafana/ldap.toml
+    - rsync -a --exclude='.git' --exclude='agent/.env' --exclude='agent/ipmi/ipmi.yml' --exclude='agent/pve/pve.yml' $CI_PROJECT_DIR/ CI_Deploy@$DEPLOY_HOST:/opt/monitor/
+    - ssh CI_Deploy@$DEPLOY_HOST "cd /opt/monitor && docker compose pull && docker compose up -d && sleep 5 && curl -sf -X POST http://localhost:9090/-/reload"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+notify-success:
+  extends: .notify-telegram-success
+  stage: notify_end
+  tags:
+    - docker
+
+notify-failure:
+  extends: .notify-telegram-failure
+  stage: notify_end
+  tags:
+    - docker

@@ -1,0 +1,35 @@
+global:
+  resolve_timeout: 5m
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+route:
+  receiver: "telegram"
+  group_by: ["alertname", "role", "env"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    - match:
+        severity: critical
+      receiver: "telegram"
+      group_wait: 5s
+      repeat_interval: 1h
+
+receivers:
+  - name: "telegram"
+    telegram_configs:
+      - bot_token: "${TELEGRAM_BOT_TOKEN}"
+        chat_id: ${TELEGRAM_CHAT_ID}
+        message: '{{ template "telegram.message" . }}'
+        parse_mode: HTML
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      alertname: NodeDown
+    target_match_re:
+      alertname: "NodeCpu.*|NodeMemory.*|NodeDisk.*"
+    equal: ["instance"]

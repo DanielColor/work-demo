@@ -1,0 +1,45 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ubuntu-vm
+  namespace: default
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ubuntu-vm
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        memory:
+          guest: 4Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: cloudinit
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/kubevirt/ubuntu-container-disk-demo:latest
+        - name: cloudinit
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              users:
+                - name: ubuntu
+                  password: ubuntu
+                  sudo: ALL=(ALL) NOPASSWD:ALL
+                  lock_passwd: false
+              ssh_pwauth: true

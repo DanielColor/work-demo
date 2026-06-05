@@ -1,0 +1,5 @@
+---
+harbor_auth_user: "{{ harbor_ci_user }}"
+harbor_auth_token: "{{ harbor_ci_token }}"
+harbor_docker_config_dir: /home/gitlab-runner/.docker
+harbor_docker_config_owner: gitlab-runner

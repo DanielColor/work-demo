@@ -1,0 +1,5 @@
+default:
+  user: prometheus@pve
+  token_name: CHANGE_ME
+  token_value: CHANGE_ME
+  verify_ssl: false

@@ -1,0 +1,9 @@
+---
+- name: Restart harbor
+  shell: |
+    docker compose down
+    ./prepare
+    docker compose up -d log --wait
+    docker compose up -d
+  args:
+    chdir: "{{ harbor_install_dir }}"

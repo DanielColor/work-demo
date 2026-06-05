@@ -1,0 +1,18 @@
+# Managed by Ansible - do not edit manually
+services:
+  node-exporter:
+    image: prom/node-exporter:{{ node_exporter_version }}
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--web.listen-address=:{{ node_exporter_port }}'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'

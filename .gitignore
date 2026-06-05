@@ -1,0 +1,17 @@
+# Secrets & credentials
+.env
+*.sqlite
+*.db
+
+# Logs & backups
+*.log
+*.bak
+*.retry
+
+# Project-specific sensitive files
+monitor/agent/ipmi/ipmi.yml
+monitor/agent/pve/pve.yml
+openldap/backups/
+gitlab/backup/
+ztp/maas/env.yaml
+ztp/netbox/env.yaml

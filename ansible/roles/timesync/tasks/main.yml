@@ -1,0 +1,114 @@
+---
+- name: Load OS-specific variables
+  include_vars: "{{ ansible_os_family | lower }}.yml"
+
+- name: Include OS-specific install tasks
+  include_tasks: "{{ ansible_os_family | lower }}.yml"
+  when: ansible_virtualization_type != 'lxc'
+
+- name: Set timezone (systemd)
+  block:
+    - name: Check current timezone
+      command: timedatectl show --property=Timezone --value
+      register: _current_tz
+      changed_when: false
+
+    - name: Apply timezone
+      command: timedatectl set-timezone {{ timezone }}
+      when: _current_tz.stdout.strip() != timezone
+  when: ansible_service_mgr == 'systemd'
+
+- name: Set timezone (OpenRC)
+  block:
+    - name: Check current localtime symlink
+      stat:
+        path: /etc/localtime
+      register: _localtime
+
+    - name: Link timezone file
+      file:
+        src: "/usr/share/zoneinfo/{{ timezone }}"
+        dest: /etc/localtime
+        state: link
+        force: true
+      when: >
+        not _localtime.stat.exists or
+        _localtime.stat.lnk_target is not defined or
+        timezone not in _localtime.stat.lnk_target
+  when: ansible_service_mgr != 'systemd'
+
+- name: Skip chrony in LXC container
+  debug:
+    msg: "LXC container detected - skipping chrony, host handles time sync"
+  when: ansible_virtualization_type == 'lxc'
+
+- name: Backup existing chrony config
+  copy:
+    src: "{{ _chrony_config }}"
+    dest: "{{ _chrony_config }}.bak"
+    remote_src: true
+    mode: "0644"
+  failed_when: false
+  when: ansible_virtualization_type != 'lxc'
+
+- name: Apply and validate chrony config
+  when: ansible_virtualization_type != 'lxc'
+  block:
+    - name: Apply chrony config template
+      template:
+        src: chrony.conf.j2
+        dest: "{{ _chrony_config }}"
+        owner: root
+        group: root
+        mode: "0644"
+      register: _chrony_template
+
+    - name: Restart chrony to apply new config
+      service:
+        name: "{{ _chrony_service }}"
+        state: restarted
+      when: _chrony_template.changed
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    - name: Verify chrony is running
+      command: chronyc activity
+      changed_when: false
+      when: _chrony_template.changed
+      ignore_errors: "{{ ansible_check_mode }}"
+
+  rescue:
+    - name: Check if backup exists
+      stat:
+        path: "{{ _chrony_config }}.bak"
+      register: _bak_stat
+
+    - name: Restore chrony config from backup
+      copy:
+        src: "{{ _chrony_config }}.bak"
+        dest: "{{ _chrony_config }}"
+        remote_src: true
+      when: _bak_stat.stat.exists
+
+    - name: Restart chrony with restored config
+      service:
+        name: "{{ _chrony_service }}"
+        state: restarted
+      when: _bak_stat.stat.exists
+
+    - name: Fail with rollback notice
+      fail:
+        msg: >
+          chrony config validation failed.
+          {% if _bak_stat.stat.exists %}
+          Rolled back to {{ _chrony_config }}.bak
+          {% else %}
+          No backup found (first run?). Check {{ _chrony_config }} manually.
+          {% endif %}
+
+- name: Ensure chrony is started and enabled
+  service:
+    name: "{{ _chrony_service }}"
+    state: started
+    enabled: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  when: ansible_virtualization_type != 'lxc'

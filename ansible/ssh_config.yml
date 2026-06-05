@@ -1,0 +1,6 @@
+---
+- name: Generate local SSH config from inventory
+  hosts: all
+  gather_facts: false
+  roles:
+    - ssh_config

@@ -1,0 +1,11 @@
+---
+- name: Set paths
+  set_fact:
+    _vimrc_path: /etc/vim/vimrc.local
+    _bashrc_path: /etc/bash.bashrc
+
+- name: Install common packages
+  apt:
+    name: "{{ common_packages_debian }}"
+    state: present
+    update_cache: true

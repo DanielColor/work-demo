@@ -1,0 +1,23 @@
+hostname: 192.168.56.x.sslip.io
+bootstrapPassword: admin
+replicas: 1
+
+# 關閉 audit log 減少資源消耗
+auditLog:
+  enabled: false
+
+# Lab 環境不需要高可用
+antiAffinity: preferred
+
+service:
+  type: ""
+  annotations: {}
+
+# 資源限制
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi

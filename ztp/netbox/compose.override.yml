@@ -1,0 +1,29 @@
+name: netbox
+
+services:
+  netbox:
+    container_name: netbox
+    ports:
+      - "${PORT}:8080"
+    healthcheck:
+      start_period: 300s
+    environment:
+      SKIP_SUPERUSER: "false"
+      SUPERUSER_NAME: "${ADMIN_USER}"
+      SUPERUSER_PASSWORD: "${ADMIN_PASS}"
+      SUPERUSER_EMAIL: "${ADMIN_EMAIL}"
+      SUPERUSER_API_TOKEN: "${ADMIN_TOKEN}"
+    volumes:
+      - ${DATA_DIR}/media:/opt/netbox/netbox/media
+      - ${DATA_DIR}/reports:/opt/netbox/netbox/reports
+      - ${DATA_DIR}/scripts:/opt/netbox/netbox/scripts
+  netbox-worker:
+    container_name: netbox-worker
+  postgres:
+    container_name: netbox-postgres
+    volumes:
+      - ${DATA_DIR}/postgres:/var/lib/postgresql
+  redis:
+    container_name: netbox-redis
+  redis-cache:
+    container_name: netbox-redis-cache

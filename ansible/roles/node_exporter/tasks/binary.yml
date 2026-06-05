@@ -1,0 +1,78 @@
+---
+- name: Resolve latest version from GitHub
+  uri:
+    url: https://api.github.com/repos/prometheus/node_exporter/releases/latest
+    return_content: true
+  register: _github_release
+  when: node_exporter_version == 'latest'
+
+- name: Set resolved version
+  set_fact:
+    _node_exporter_version: >-
+      {{ _github_release.json.tag_name | regex_replace('^v', '')
+         if node_exporter_version == 'latest'
+         else node_exporter_version }}
+
+- name: Set architecture
+  set_fact:
+    _node_exporter_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64', 'armv7l': 'armv7'}[ansible_architecture] }}"
+
+- name: Create service user
+  user:
+    name: "{{ node_exporter_service_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Check installed version
+  command: "{{ node_exporter_install_dir }}/node_exporter --version"
+  register: _current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install binary
+  when: _current_version.rc != 0 or _node_exporter_version not in (_current_version.stderr | default(''))
+  block:
+    - name: Create temp directory
+      tempfile:
+        state: directory
+      register: _tmpdir
+
+    - name: Download node_exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ _node_exporter_version }}/node_exporter-{{ _node_exporter_version }}.linux-{{ _node_exporter_arch }}.tar.gz"
+        dest: "{{ _tmpdir.path }}/node_exporter.tar.gz"
+        mode: "0644"
+
+    - name: Extract archive
+      unarchive:
+        src: "{{ _tmpdir.path }}/node_exporter.tar.gz"
+        dest: "{{ _tmpdir.path }}"
+        remote_src: true
+
+    - name: Install binary
+      copy:
+        src: "{{ _tmpdir.path }}/node_exporter-{{ _node_exporter_version }}.linux-{{ _node_exporter_arch }}/node_exporter"
+        dest: "{{ node_exporter_install_dir }}/node_exporter"
+        mode: "0755"
+        remote_src: true
+      notify: restart node_exporter
+
+    - name: Remove temp directory
+      file:
+        path: "{{ _tmpdir.path }}"
+        state: absent
+
+- name: Deploy systemd service
+  template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    mode: "0644"
+  notify: restart node_exporter
+
+- name: Enable and start node_exporter
+  systemd:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true

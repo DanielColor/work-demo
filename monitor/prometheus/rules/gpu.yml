@@ -1,0 +1,32 @@
+groups:
+  - name: gpu
+    rules:
+      - alert: GpuDown
+        expr: up{job="dcgm-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GPU exporter 離線"
+          description: "GPU exporter 無法連線"
+          dashboard_uid: "Oxed_c6Wz"
+
+      - alert: GpuTemperatureHigh
+        expr: DCGM_FI_DEV_GPU_TEMP > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU 溫度過高"
+          description: "GPU {{ $labels.gpu }} 溫度 {{ $value }}°C"
+          dashboard_uid: "Oxed_c6Wz"
+
+      - alert: GpuMemoryHigh
+        expr: DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU 記憶體使用率過高"
+          description: "GPU {{ $labels.gpu }} 記憶體使用率 {{ printf \"%.1f\" $value }}%"
+          dashboard_uid: "Oxed_c6Wz"

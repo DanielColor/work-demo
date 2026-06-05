@@ -1,0 +1,40 @@
+---
+- name: Configure insecure registries
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "insecure-registries": ["{{ harbor_registry_host }}"]
+      }
+    mode: "0644"
+  notify: Restart docker
+
+- name: Ensure .docker directory exists
+  file:
+    path: "{{ harbor_docker_config_dir }}"
+    state: directory
+    mode: "0700"
+    owner: "{{ harbor_docker_config_owner }}"
+    group: "{{ harbor_docker_config_owner }}"
+
+- name: Write docker config with Harbor credentials
+  copy:
+    dest: "{{ harbor_docker_config_dir }}/config.json"
+    content: |
+      {
+        "auths": {
+          "{{ harbor_registry_host }}": {
+            "auth": "{{ (harbor_auth_user + ':' + harbor_auth_token) | b64encode }}"
+          }
+        }
+      }
+    mode: "0600"
+    owner: "{{ harbor_docker_config_owner }}"
+    group: "{{ harbor_docker_config_owner }}"
+
+- name: Verify Harbor registry credentials
+  uri:
+    url: "http://{{ harbor_registry_host }}/api/v2.0/projects/{{ harbor_registry_project }}/repositories"
+    headers:
+      Authorization: "Basic {{ (harbor_auth_user + ':' + harbor_auth_token) | b64encode }}"
+    status_code: 200

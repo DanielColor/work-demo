@@ -1,0 +1,55 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    daemon
+    maxconn 4096
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    timeout connect 30s
+    timeout client  1h
+    timeout server  1h
+    timeout tunnel  1h
+    timeout http-request 30s
+
+frontend fe_http
+    bind *:80
+    mode http
+    redirect scheme https code 301
+
+frontend fe_https
+    bind *:443 ssl crt {{ haproxy_cert_path }}
+    mode http
+
+    option http-server-close
+    option forwardfor
+
+    http-request set-header X-Forwarded-Proto https
+    http-request set-header X-Forwarded-Port 443
+
+{% for svc in services %}
+    acl host_{{ svc.name }}  hdr(host) -i {{ svc.name }}.{{ haproxy_domain }}
+{% endfor %}
+
+{% for svc in services %}
+    use_backend be_{{ svc.name }}  if host_{{ svc.name }}
+{% endfor %}
+
+    default_backend be_default
+
+{% for svc in services %}
+backend be_{{ svc.name }}
+    mode http
+{% if svc.healthcheck is defined %}
+    option httpchk {{ svc.healthcheck }}
+    http-check expect status {{ svc.healthcheck_status | default(200) }}
+{% endif %}
+    server {{ svc.name }} {{ svc.ip }}:{{ svc.port }}{{ ' ssl' if svc.ssl | default(false) }} verify none check
+
+{% endfor %}
+backend be_default
+    mode http
+    http-request deny

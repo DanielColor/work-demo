@@ -1,0 +1,3 @@
+plugin: maas.maas.maas
+maas_url: http://<MAAS_VM_eth0_IP>:5240/MAAS
+maas_apikey: <API_KEY>

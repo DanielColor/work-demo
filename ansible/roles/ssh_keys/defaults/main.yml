@@ -1,0 +1,15 @@
+---
+ssh_keys: []
+# ssh_keys:
+#   - user: ubuntu
+#     key: "ssh-ed25519 AAAA..."
+#     state: present        # present / absent，預設 present
+#     create_user: false    # 是否建立使用者，預設 false
+#     shell: /bin/bash      # 預設 /bin/bash
+#     sudo: false           # 是否加入 sudo 群組，預設 false
+
+ssh_cleanup_default_users: []
+# 清除預設帳號的 authorized_keys，確認新帳號可以登入後再執行：
+# ansible-playbook site.yml --tags cleanup_default_keys
+# ssh_cleanup_default_users:
+#   - ubuntu

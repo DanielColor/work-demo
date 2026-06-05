@@ -1,0 +1,42 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: fedora-vm
+  namespace: default
+spec:
+  running: false          # 建立後不自動啟動，手動 virtctl start
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: fedora-vm
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        memory:
+          guest: 2Gi
+        devices:
+          disks:
+            - name: rootdisk
+              disk:
+                bus: virtio
+            - name: cloudinit
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}   # NAT 方式連網
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            # KubeVirt 提供的測試用 Fedora image
+            image: quay.io/kubevirt/fedora-cloud-container-disk-demo:latest
+        - name: cloudinit
+          cloudInitNoCloud:
+            userDataBase64: |
+              # cloud-init 設定
+              # 預設帳號：fedora / fedora
+              I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGZlZG9yYQogICAgcGFzc3dvcmQ6IGZlZG9yYQogICAgc3VkbzogQUxMPShBTEwpIE5PUEFTU1dEOkFMTAogICAgbG9ja19wYXNzd2Q6IGZhbHNlCg==

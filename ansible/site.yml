@@ -1,0 +1,42 @@
+---
+- name: Setup all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: docker
+      tags: docker
+
+- name: Install node exporter
+  hosts: node_exporter
+  become: true
+  roles:
+    - role: node_exporter
+      tags: node_exporter
+
+- name: Setup GitLab Runner
+  hosts: runners
+  become: true
+  roles:
+    - role: gitlab_runner
+      tags: gitlab_runner
+
+- name: Setup Harbor
+  hosts: harbor
+  become: true
+  roles:
+    - role: harbor
+      tags: harbor
+
+- name: Setup Harbor registry access
+  hosts: harbor_registry
+  become: true
+  roles:
+    - role: harbor_registry
+      tags: harbor_registry
+
+- name: Sync Prometheus targets
+  hosts: monitor
+  become: true
+  roles:
+    - role: prometheus_file_sd
+      tags: prometheus_file_sd

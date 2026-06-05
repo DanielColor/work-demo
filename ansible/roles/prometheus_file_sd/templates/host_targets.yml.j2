@@ -1,0 +1,9 @@
+# Managed by Ansible - do not edit manually
+{% if item in groups.get('node_exporter', []) %}
+- targets: ["{{ hostvars[item].ansible_host }}:{{ node_exporter_port }}"]
+  labels:
+    hostname: "{{ item }}"
+    job: node-exporter
+    env: "{{ prom_env }}"
+    role: "{{ hostvars[item].prom_role }}"
+{% endif %}

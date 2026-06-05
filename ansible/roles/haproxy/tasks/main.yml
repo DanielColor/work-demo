@@ -1,0 +1,26 @@
+---
+- name: Validate haproxy config (dry-run)
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /tmp/haproxy_check.cfg
+    mode: '0644'
+
+- name: Check haproxy config syntax
+  ansible.builtin.command: haproxy -c -f /tmp/haproxy_check.cfg
+  changed_when: false
+
+- name: Backup current haproxy config
+  ansible.builtin.copy:
+    src: "{{ haproxy_config_path }}"
+    dest: "{{ haproxy_config_path }}.bak.{{ ansible_date_time.iso8601_basic_short }}"
+    remote_src: true
+    mode: '0644'
+
+- name: Deploy haproxy config
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ haproxy_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload haproxy

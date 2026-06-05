@@ -1,0 +1,40 @@
+---
+- name: Include OS-specific tasks
+  include_tasks: "{{ ansible_os_family | lower }}.yml"
+
+- name: Ensure gitlab-runner service is started and enabled
+  service:
+    name: gitlab-runner
+    state: started
+    enabled: true
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Set concurrent in config.toml
+  lineinfile:
+    path: /etc/gitlab-runner/config.toml
+    regexp: '^concurrent\s*='
+    line: "concurrent = {{ gitlab_runner_concurrent }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart gitlab-runner
+
+- name: Cron - weekly docker prune on Sunday midnight
+  cron:
+    name: docker-prune-weekly
+    weekday: "0"
+    hour: "0"
+    minute: "0"
+    job: docker system prune -f >> /var/log/docker-prune.log 2>&1
+    state: present
+
+- name: Cron - daily docker prune when disk usage exceeds threshold
+  cron:
+    name: docker-prune-disk-threshold
+    hour: "3"
+    minute: "0"
+    job: >-
+      [ "$(df /var/lib/docker --output=pcent 2>/dev/null | tail -1 | tr -d ' %')" -ge {{ gitlab_runner_docker_prune_disk_threshold }} ]
+      && docker system prune -f >> /var/log/docker-prune.log 2>&1
+    state: present

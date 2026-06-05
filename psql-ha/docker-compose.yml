@@ -1,0 +1,192 @@
+name: psql-ha
+
+networks:
+  pg-ha:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  etcd1-data:
+  etcd2-data:
+  etcd3-data:
+  patroni1-data:
+  patroni2-data:
+  patroni3-data:
+
+services:
+  # ── etcd cluster (3 nodes for quorum) ────────────────────────────────────────
+  etcd1:
+    image: bitnami/etcd:3.5
+    container_name: etcd1
+    hostname: etcd1
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.11
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_NAME: etcd1
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: pg-ha-cluster
+    volumes:
+      - etcd1-data:/bitnami/etcd
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  etcd2:
+    image: bitnami/etcd:3.5
+    container_name: etcd2
+    hostname: etcd2
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.12
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_NAME: etcd2
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: pg-ha-cluster
+    volumes:
+      - etcd2-data:/bitnami/etcd
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  etcd3:
+    image: bitnami/etcd:3.5
+    container_name: etcd3
+    hostname: etcd3
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.13
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_NAME: etcd3
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: pg-ha-cluster
+    volumes:
+      - etcd3-data:/bitnami/etcd
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Patroni + PostgreSQL nodes ────────────────────────────────────────────────
+  patroni1:
+    build: ./patroni
+    container_name: patroni1
+    hostname: patroni1
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.21
+    environment:
+      PATRONI_NAME: patroni1
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: patroni1:5432
+      PATRONI_RESTAPI_CONNECT_ADDRESS: patroni1:8008
+      PATRONI_ETCD3_HOSTS: etcd1:2379,etcd2:2379,etcd3:2379
+      PATRONI_SUPERUSER_PASSWORD: ${POSTGRES_PASSWORD:-<CHANGE_ME>}
+      PATRONI_REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-<CHANGE_ME>}
+    volumes:
+      - patroni1-data:/var/lib/postgresql/data
+    depends_on:
+      etcd1:
+        condition: service_healthy
+      etcd2:
+        condition: service_healthy
+      etcd3:
+        condition: service_healthy
+    restart: unless-stopped
+
+  patroni2:
+    build: ./patroni
+    container_name: patroni2
+    hostname: patroni2
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.22
+    environment:
+      PATRONI_NAME: patroni2
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: patroni2:5432
+      PATRONI_RESTAPI_CONNECT_ADDRESS: patroni2:8008
+      PATRONI_ETCD3_HOSTS: etcd1:2379,etcd2:2379,etcd3:2379
+      PATRONI_SUPERUSER_PASSWORD: ${POSTGRES_PASSWORD:-<CHANGE_ME>}
+      PATRONI_REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-<CHANGE_ME>}
+    volumes:
+      - patroni2-data:/var/lib/postgresql/data
+    depends_on:
+      etcd1:
+        condition: service_healthy
+      etcd2:
+        condition: service_healthy
+      etcd3:
+        condition: service_healthy
+    restart: unless-stopped
+
+  patroni3:
+    build: ./patroni
+    container_name: patroni3
+    hostname: patroni3
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.23
+    environment:
+      PATRONI_NAME: patroni3
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: patroni3:5432
+      PATRONI_RESTAPI_CONNECT_ADDRESS: patroni3:8008
+      PATRONI_ETCD3_HOSTS: etcd1:2379,etcd2:2379,etcd3:2379
+      PATRONI_SUPERUSER_PASSWORD: ${POSTGRES_PASSWORD:-<CHANGE_ME>}
+      PATRONI_REPLICATION_PASSWORD: ${REPLICATION_PASSWORD:-<CHANGE_ME>}
+    volumes:
+      - patroni3-data:/var/lib/postgresql/data
+    depends_on:
+      etcd1:
+        condition: service_healthy
+      etcd2:
+        condition: service_healthy
+      etcd3:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── HAProxy (讀寫分離) ─────────────────────────────────────────────────────────
+  haproxy:
+    image: haproxy:2.9
+    container_name: haproxy
+    hostname: haproxy
+    networks:
+      pg-ha:
+        ipv4_address: 172.20.0.30
+    ports:
+      - "5432:5432"   # primary (read-write)
+      - "5433:5433"   # replicas (read-only)
+      - "7000:7000"   # stats UI
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - patroni1
+      - patroni2
+      - patroni3
+    restart: unless-stopped

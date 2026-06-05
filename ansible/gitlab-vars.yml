@@ -1,0 +1,26 @@
+---
+- name: Sync GitLab CI/CD Variables
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Sync group variables
+      community.general.gitlab_group_variable:
+        api_url: "{{ gitlab_api_url }}"
+        api_token: "{{ vault_gitlab_token }}"
+        group: "{{ gitlab_group }}"
+        variables: "{{ gitlab_group_variables }}"
+        purge: false
+        state: present
+      tags: group
+
+    - name: Sync project variables
+      community.general.gitlab_project_variable:
+        api_url: "{{ gitlab_api_url }}"
+        api_token: "{{ vault_gitlab_token }}"
+        project: "{{ item.project }}"
+        variables: "{{ item.variables }}"
+        purge: false
+        state: present
+      loop: "{{ gitlab_project_variables }}"
+      when: gitlab_project_variables | length > 0
+      tags: project

@@ -1,0 +1,7 @@
+---
+- name: Deploy HAProxy config
+  hosts: haproxy
+  become: true
+
+  roles:
+    - role: haproxy

@@ -1,0 +1,118 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-24.04"
+
+  config.vm.provision "shell" do |s|
+    s.inline = <<-SHELL
+      mkdir -p /home/vagrant/.ssh
+      echo 'ssh-ed25519 <YOUR_PUBLIC_KEY> user@example.com' \
+        >> /home/vagrant/.ssh/authorized_keys
+      chmod 700 /home/vagrant/.ssh
+      chmod 600 /home/vagrant/.ssh/authorized_keys
+      chown -R vagrant:vagrant /home/vagrant/.ssh
+    SHELL
+  end
+
+  # ─── MAAS Server ─────────────────────────────────────────
+  config.vm.define "maas" do |m|
+    m.vm.hostname = "maas"
+    # 管理網段：host 存取 Web UI / SSH
+    m.vm.network "private_network", ip: "192.168.56.10"
+    # PXE 網段：MAAS DHCP 服務 node 開機
+    m.vm.network "private_network", ip: "192.168.100.2"
+
+    m.vm.provider "virtualbox" do |vb|
+      vb.name   = "ztp-maas"
+      vb.memory = 4096
+      vb.cpus   = 2
+      vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+    end
+
+    m.vm.provision "shell" do |s|
+      s.path = "maas/install.sh"
+      s.args = [
+        "--ext-nic",   "eth0",
+        "--mgmt-nic",  "eth2",
+        "--mgmt-ip",   "192.168.100.2",
+        "--mgmt-cidr", "192.168.100.2/24",
+        "--admin-pass", "admin",
+        "--admin-email", "admin@local",
+        "--skip-dns",
+      ]
+    end
+  end
+
+  # ─── Netbox Server ───────────────────────────────────────
+  config.vm.define "netbox" do |n|
+    n.vm.hostname = "netbox"
+    n.vm.network "private_network", ip: "192.168.56.11"
+
+    n.vm.provider "virtualbox" do |vb|
+      vb.name   = "ztp-netbox"
+      vb.memory = 2048
+      vb.cpus   = 4
+    end
+
+    n.vm.provision "file",
+      source:      "netbox/compose.override.yml",
+      destination: "/tmp/netbox/compose.override.yml"
+
+    n.vm.provision "shell" do |s|
+      s.path        = "netbox/install.sh"
+      s.upload_path = "/tmp/netbox/install.sh"
+      s.args = [
+        "--port",        "8000",
+        "--admin-user",  "admin",
+        "--admin-pass",  "admin",
+        "--admin-email", "admin@local",
+        "--admin-token", "0123456789abcdef0123456789abcdef01234567",
+      ]
+    end
+  end
+
+  # ─── Node 01：Proxmox 安裝目標 ───────────────────────────
+  config.vm.define "node01" do |n|
+    n.vm.hostname  = "node01"
+    n.vm.box       = "bento/ubuntu-24.04"
+    # PXE 網段，IP 由 MAAS DHCP 派發
+    n.vm.network "private_network", type: "dhcp",
+                 ip: "192.168.100.0", netmask: "255.255.255.0"
+
+    n.vm.provider "virtualbox" do |vb|
+      vb.name   = "ztp-node01"
+      vb.memory = 4096
+      vb.cpus   = 2
+      # PXE boot 優先，指定 Adapter 2（hostonly）做 PXE
+      vb.customize ["modifyvm", :id, "--boot1", "net"]
+      vb.customize ["modifyvm", :id, "--boot2", "disk"]
+      vb.customize ["modifyvm", :id, "--boot3", "none"]
+      vb.customize ["modifyvm", :id, "--boot4", "none"]
+      vb.customize ["modifyvm", :id, "--nicbootprio1", "0"]
+      vb.customize ["modifyvm", :id, "--nicbootprio2", "1"]
+      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+      vb.customize ["modifyvm", :id, "--firmware", "efi"]
+    end
+  end
+
+  # ─── Node 02：Ubuntu k8s node ────────────────────────────
+  config.vm.define "node02" do |n|
+    n.vm.hostname  = "node02"
+    n.vm.box       = "bento/ubuntu-24.04"
+    n.vm.network "private_network", type: "dhcp",
+                 ip: "192.168.100.0", netmask: "255.255.255.0"
+
+    n.vm.provider "virtualbox" do |vb|
+      vb.name   = "ztp-node02"
+      vb.memory = 4096
+      vb.cpus   = 2
+      vb.customize ["modifyvm", :id, "--nictype2", "Am79C973"]
+      vb.customize ["modifyvm", :id, "--boot1", "net"]
+      vb.customize ["modifyvm", :id, "--boot2", "disk"]
+      vb.customize ["modifyvm", :id, "--boot3", "none"]
+      vb.customize ["modifyvm", :id, "--boot4", "none"]
+      vb.customize ["modifyvm", :id, "--nicbootprio1", "0"]
+      vb.customize ["modifyvm", :id, "--nicbootprio2", "1"]
+      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+      vb.customize ["modifyvm", :id, "--firmware", "efi"]
+    end
+  end
+end

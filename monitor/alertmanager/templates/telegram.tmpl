@@ -1,0 +1,25 @@
+{{ define "telegram.message" }}
+{{- if eq .Status "firing" }}
+🔴 <b>[ALERT] {{ .CommonLabels.alertname }}</b>{{ if .CommonAnnotations.summary }} — {{ .CommonAnnotations.summary }}{{ end }}
+{{ range .Alerts }}
+<b>主機：</b>{{ if .Labels.hostname }}{{ .Labels.hostname }} ({{ .Labels.instance }}){{ else }}{{ .Labels.instance }}{{ end }}
+<b>類型：</b>{{ if .Labels.role }}{{ .Labels.role }}{{ else }}—{{ end }}
+<b>環境：</b>{{ if .Labels.env }}{{ .Labels.env }}{{ else }}—{{ end }}
+<b>嚴重度：</b>{{ .Labels.severity }}
+{{- if .Annotations.description }}
+<b>說明：</b><code>{{ .Annotations.description }}</code>
+{{- end }}
+<b>時間：</b>{{ .StartsAt.Local.Format "2006-01-02 15:04:05" }}
+📊 {{ if .Annotations.dashboard_uid }}<a href="http://192.168.1.x:3000/d/{{ .Annotations.dashboard_uid }}">查看 Dashboard</a>{{ else }}Grafana: http://192.168.1.x:3000{{ end }}
+{{ end }}
+{{- else }}
+✅ <b>[RESOLVED] {{ .CommonLabels.alertname }}</b>{{ if .CommonAnnotations.summary }} — {{ .CommonAnnotations.summary }}{{ end }}
+{{ range .Alerts }}
+<b>主機：</b>{{ if .Labels.hostname }}{{ .Labels.hostname }} ({{ .Labels.instance }}){{ else }}{{ .Labels.instance }}{{ end }}
+<b>類型：</b>{{ if .Labels.role }}{{ .Labels.role }}{{ else }}—{{ end }}
+<b>環境：</b>{{ if .Labels.env }}{{ .Labels.env }}{{ else }}—{{ end }}
+<b>恢復時間：</b>{{ .EndsAt.Local.Format "2006-01-02 15:04:05" }}
+<b>持續時間：</b>{{ humanizeDuration .EndsAt.Sub .StartsAt }}
+{{ end }}
+{{- end }}
+{{- end }}

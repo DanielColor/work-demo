@@ -1,0 +1,97 @@
+# Telegram Pipeline 通知
+#
+# 使用方式：
+#
+#   stages:
+#     - notify_start
+#     - build          # 你的 CI 階段
+#     - notify_end
+#
+#   include:
+#     - project: 'your-group/ci-template'
+#       file: '/jobs/notify-telegram.yml'
+#
+#   notify-start:
+#     extends: .notify-telegram-start
+#     tags:
+#       - docker
+#
+#   notify-end-success:
+#     extends: .notify-telegram-success
+#     tags:
+#       - docker
+#
+#   notify-end-failure:
+#     extends: .notify-telegram-failure
+#     tags:
+#       - docker
+#
+# 前置條件：
+#   - Group variable TELEGRAM_BOT_TOKEN 需設定
+#   - Group variable TELEGRAM_CHAT_ID 需設定
+
+---
+.notify-telegram-base:
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl tzdata
+    - cp /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+    - echo "Asia/Taipei" > /etc/timezone
+
+.notify-telegram-start:
+  extends: .notify-telegram-base
+  script:
+    - |
+      AUTHOR="${GITLAB_USER_LOGIN}"
+      TIME=$(date '+%Y-%m-%d %H:%M:%S')
+      HASH=$(echo "${CI_COMMIT_SHORT_SHA}" | cut -c1-5)
+      COMMIT_MSG=$(echo "${CI_COMMIT_MESSAGE}" | head -1)
+      MESSAGE=$(printf "🚀 Pipeline 開始\n\n👤 發起者：%s\n🕐 時間：%s\n🌿 分支：%s\n🔖 Commit：%s\n📝 訊息：%s\n🔗 %s" \
+        "${AUTHOR}" "${TIME}" "${CI_COMMIT_BRANCH}" "${HASH}" "${COMMIT_MSG}" "${CI_PIPELINE_URL}")
+      curl -s -X POST \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${MESSAGE}"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+.notify-telegram-success:
+  extends: .notify-telegram-base
+  script:
+    - |
+      AUTHOR="${GITLAB_USER_LOGIN}"
+      TIME=$(date '+%Y-%m-%d %H:%M:%S')
+      HASH=$(echo "${CI_COMMIT_SHORT_SHA}" | cut -c1-5)
+      COMMIT_MSG=$(echo "${CI_COMMIT_MESSAGE}" | head -1)
+      MESSAGE=$(printf "✅ Pipeline 成功\n\n👤 發起者：%s\n🕐 時間：%s\n🌿 分支：%s\n🔖 Commit：%s\n📝 訊息：%s\n🔗 %s" \
+        "${AUTHOR}" "${TIME}" "${CI_COMMIT_BRANCH}" "${HASH}" "${COMMIT_MSG}" "${CI_PIPELINE_URL}")
+      curl -s -X POST \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${MESSAGE}"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
+
+.notify-telegram-failure:
+  extends: .notify-telegram-base
+  script:
+    - |
+      AUTHOR="${GITLAB_USER_LOGIN}"
+      TIME=$(date '+%Y-%m-%d %H:%M:%S')
+      HASH=$(echo "${CI_COMMIT_SHORT_SHA}" | cut -c1-5)
+      COMMIT_MSG=$(echo "${CI_COMMIT_MESSAGE}" | head -1)
+      MESSAGE=$(printf "❌ Pipeline 失敗\n\n👤 發起者：%s\n🕐 時間：%s\n🌿 分支：%s\n🔖 Commit：%s\n📝 訊息：%s\n🔗 %s" \
+        "${AUTHOR}" "${TIME}" "${CI_COMMIT_BRANCH}" "${HASH}" "${COMMIT_MSG}" "${CI_PIPELINE_URL}")
+      curl -s -X POST \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${MESSAGE}"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      when: on_failure
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_failure

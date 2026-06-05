@@ -1,0 +1,89 @@
+scope: pg-ha-cluster
+name: node1          # node2 / node3 改這裡
+
+log:
+  format: '%(asctime)s %(levelname)s: %(message)s'
+  level: INFO
+  max_queue_size: 1000
+  traceback_level: ERROR
+  type: plain
+
+restapi:
+  connect_address: 172.21.0.11:8008   # node2 → .12  node3 → .13
+  listen: 0.0.0.0:8008
+
+etcd3:
+  hosts: 172.21.0.11:2379,172.21.0.12:2379,172.21.0.13:2379
+
+bootstrap:
+  dcs:
+    loop_wait: 10
+    retry_timeout: 10
+    ttl: 30
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        hot_standby: 'on'
+        max_connections: 100
+        max_locks_per_transaction: 64
+        max_prepared_transactions: 0
+        max_replication_slots: 10
+        max_wal_senders: 10
+        max_worker_processes: 8
+        track_commit_timestamp: 'off'
+        wal_keep_size: 128MB
+        wal_level: replica
+        wal_log_hints: 'on'
+
+        # slow log
+        log_min_duration_statement: 500
+        log_line_prefix: '%t [%p] %u@%d '
+        log_checkpoints: 'on'
+        log_connections: 'on'
+        log_disconnections: 'on'
+        log_lock_waits: 'on'
+        log_temp_files: 10240
+        log_destination: 'stderr'
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+  pg_hba:
+    - local all all trust
+    - host replication replicator 172.21.0.0/24 scram-sha-256
+    - host all all 0.0.0.0/0 scram-sha-256
+
+  users:
+    rewind_user:
+      password: '<CHANGE_ME>'
+      options:
+        - login
+
+postgresql:
+  connect_address: 172.21.0.11:5432   # node2 → .12  node3 → .13
+  listen: 0.0.0.0:5432
+  data_dir: /var/lib/postgresql/data
+  pgpass: /tmp/.pgpass
+  bin_dir: ''
+  authentication:
+    superuser:
+      username: postgres
+      password: '<CHANGE_ME>'
+    replication:
+      username: replicator
+      password: '<CHANGE_ME>'
+    rewind:
+      username: rewind_user
+      password: '<CHANGE_ME>'
+  parameters:
+    password_encryption: scram-sha-256
+
+tags:
+  clonefrom: true
+  failover_priority: 1
+  noloadbalance: false
+  nostream: false
+  nosync: false
+  sync_priority: 1

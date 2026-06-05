@@ -1,0 +1,38 @@
+groups:
+  - name: ipmi
+    rules:
+      - alert: IpmiDown
+        expr: up{job="ipmi"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "IPMI exporter 離線"
+          description: "無法連線至 {{ $labels.instance }}"
+
+      - alert: IpmiTemperatureHigh
+        expr: ipmi_temperature_celsius > 70
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "IPMI 溫度過高"
+          description: "{{ $labels.instance }} {{ $labels.name }} 溫度 {{ printf \"%.1f\" $value }}°C"
+
+      - alert: IpmiTemperatureCritical
+        expr: ipmi_temperature_celsius > 85
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "IPMI 溫度嚴重過高"
+          description: "{{ $labels.instance }} {{ $labels.name }} 溫度 {{ printf \"%.1f\" $value }}°C，請立即處理"
+
+      - alert: IpmiFanFailed
+        expr: ipmi_fan_speed_rpm == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "風扇故障"
+          description: "{{ $labels.instance }} {{ $labels.name }} 轉速為 0"

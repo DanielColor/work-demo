@@ -1,0 +1,92 @@
+# ============================================================
+# GitLab CI 起始範本
+#
+# 使用方式：
+#   1. 複製此檔案為專案根目錄的 .gitlab-ci.yml
+#   2. 在 stages 區塊加入你需要的 stage 名稱
+#   3. 在檔案下方填入對應的 job
+#   4. 不需要的範例 job 直接刪除
+#
+# 前置條件（Group Variable，）：
+#   - TELEGRAM_BOT_TOKEN  Telegram Bot Token
+#   - TELEGRAM_CHAT_ID    接收通知的 Chat ID
+#   - SSH_DEPLOY_KEY      CI_Deploy 私鑰（File 類型，部署用）
+# ============================================================
+
+stages:
+  - notify_start
+  # ↓ 在這裡加入你的 stages
+  - test
+  - build
+  - deploy
+  # ↑ 在這裡加入你的 stages
+  - notify_end
+
+include:
+  - project: 'your-group/ci-template'
+    file: '/jobs/secret-detection.yml'
+  - project: 'your-group/ci-template'
+    file: '/jobs/ssh-deploy.yml'
+  - project: 'your-group/ci-template'
+    file: '/jobs/notify-telegram.yml'
+
+# ============================================================
+# Telegram 通知（不需修改）
+# ============================================================
+
+notify-start:
+  extends: .notify-telegram-start
+  stage: notify_start
+  tags:
+    - docker
+
+notify-end-success:
+  extends: .notify-telegram-success
+  stage: notify_end
+  tags:
+    - docker
+
+notify-end-failure:
+  extends: .notify-telegram-failure
+  stage: notify_end
+  tags:
+    - docker
+
+# ============================================================
+# 在這裡填入你的 jobs
+# ============================================================
+
+# ----- test -----
+# test:
+#   stage: test
+#   image: python:3.11       # 換成你需要的 image
+#   tags:
+#     - docker
+#   script:
+#     - pip install -r requirements.txt
+#     - pytest
+
+# ----- build image -----
+# build:
+#   stage: build
+#   image: docker:latest
+#   tags:
+#     - docker
+#   script:
+#     - docker build -t 192.168.1.x/lab/YOURAPP:$CI_COMMIT_SHORT_SHA .
+#     - docker push 192.168.1.x/lab/YOURAPP:$CI_COMMIT_SHORT_SHA
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+
+# ----- deploy -----
+# deploy:
+#   stage: deploy
+#   extends: .ssh-deploy-setup
+#   variables:
+#     DEPLOY_HOST: "192.168.x.x"   # 改成目標機器 IP
+#   tags:
+#     - docker
+#   script:
+#     - ssh CI_Deploy@$DEPLOY_HOST "cd /opt/YOURAPP && docker compose pull && docker compose up -d"
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"

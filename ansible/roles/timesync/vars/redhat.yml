@@ -1,0 +1,3 @@
+---
+_chrony_config: /etc/chrony.conf
+_chrony_service: chronyd

@@ -1,0 +1,26 @@
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: unless-stopped
+    env_file: .env
+    shm_size: '256m'
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    ports:
+      - "6060:80"
+      - "2224:22"
+    volumes:
+      - ./gitlab.rb:/etc/gitlab/gitlab.rb:rw
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+      - ./backup:/var/opt/gitlab/backups
+
+volumes:
+  gitlab_config:
+  gitlab_logs:
+  gitlab_data:

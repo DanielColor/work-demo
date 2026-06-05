@@ -1,0 +1,45 @@
+---
+- name: Install prerequisites
+  apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: Create keyring directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download GitLab Runner GPG key
+  get_url:
+    url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    dest: /tmp/gitlab-runner.gpg.asc
+    mode: "0644"
+    force: true
+
+- name: Dearmor GitLab Runner GPG key
+  shell: gpg --dearmor < /tmp/gitlab-runner.gpg.asc > /etc/apt/keyrings/gitlab-runner.gpg
+  args:
+    creates: /etc/apt/keyrings/gitlab-runner.gpg
+
+- name: Get system architecture
+  command: dpkg --print-architecture
+  register: dpkg_arch
+  changed_when: false
+  check_mode: false
+
+- name: Add GitLab Runner repository
+  apt_repository:
+    repo: "deb [arch={{ dpkg_arch.stdout }} signed-by=/etc/apt/keyrings/gitlab-runner.gpg] https://packages.gitlab.com/runner/gitlab-runner/{{ ansible_distribution | lower }}/ {{ ansible_distribution_release }} main"
+    filename: gitlab-runner
+    state: present
+
+- name: Install gitlab-runner
+  apt:
+    name: gitlab-runner
+    state: present
+    update_cache: true
+  ignore_errors: "{{ ansible_check_mode }}"

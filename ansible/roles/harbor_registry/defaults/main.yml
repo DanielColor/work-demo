@@ -1,0 +1,5 @@
+---
+harbor_auth_user: "{{ harbor_deployer_user }}"
+harbor_auth_token: "{{ harbor_deployer_token }}"
+harbor_docker_config_dir: /home/CI_Deploy/.docker
+harbor_docker_config_owner: CI_Deploy
